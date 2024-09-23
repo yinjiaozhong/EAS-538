@@ -1,0 +1,332 @@
+---
+title: "Problem Set 1"
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+setwd("~/Desktop/EAS 538 Lab/problem set1")
+```
+
+```{r message=FALSE}
+library(car)
+library(carData)
+library(tidyverse)
+```
+
+# Question 1 
+
+```{r}
+data1 <- read.csv("data_q1.csv")
+head(data1)
+```
+
+## a 
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** There is no significant different in quiz scores across the three study groups.
+
+- **$H_A$ (Alternative hypothesis):** There is a significant difference in quiz score across the three study groups.
+
+## b 
+
+```{r message=F}
+library(ggplot2)
+# create a boxplot
+plot1 <- ggplot(data1, aes(x = group, y = scores, fill = group))
+boxplot <- plot1 + geom_boxplot()
+label_plot <- boxplot + labs(title = "Quiz 1 Scores Across Study Groups", x = "Study Group", y = "Quiz 1 Scores/Percent")
+print(label_plot)
+```
+
+**Answer**:
+
+From the box plot, the mean score of group 1 seem lower than that of the other two groups.
+
+## c 
+
+**Answer**:
+
+Since we have a categorical independent variable (study group) and a continuous dependent variable (quiz score), we can use one-way ANOVA tests. Before performing ANOVA tests, we need to check whether the assumption is that quiz scores in each group are approximately normally distributed and that the variance of quiz scores across all groups should be approximately equal.
+
+```{r}
+# check normality assumption
+group1 <- filter(data1, group=='group1')
+group2 <- filter(data1, group=='group2')
+group3 <- filter(data1, group=='group3')
+
+dim(group1)
+```
+```{r}
+dim(group2)
+```
+```{r}
+dim(group3)
+```
+```{r}
+shapiro.test(group1$scores)
+```
+```{r}
+shapiro.test(group2$scores)
+```
+```{r}
+shapiro.test(group3$scores)
+```
+
+
+```{r}
+# check homogeneity of variances assumption
+#group <- as.factor(group)
+leveneTest(scores ~ group, data = data1, center = mean)
+```
+**Conclusion**:
+
+As the reasult, in the leveneTest the P-value is 0.2649 > alpha = 0.05, we can not reject the null hypothesis, so the variance is equal among the groups. From the shapiro test of each group, all the P-value > alpha = 0.05, we can not reject the null hypothesis, so scores are normally distributed.
+
+## d 
+
+```{r}
+# use ANOVA test
+anova <- aov(scores ~ group, data = data1)
+summary(anova)
+```
+```{r}
+# use post-hoc test
+TukeyHSD(anova)
+```
+
+**Answer**: 
+
+**-**
+Because the P-value of ANOVA test is 7.65e-06<< alpha = 0.05, we can reject the null hypothesis that there are significant differences in quiz scores between the experimental groups. So I chose Tukey's HSD for a post hoc test to determine which groups were significantly different from each other. 
+
+**-**
+The results showed that the p adj = 0.001341 and 0.0000087 < alpha = 0.05 between group1 and group2 and group3 was significant, but the p adj = 0.437854 > alpha=0.05 between group2 and group3 was not significant.
+
+
+# Question 2 
+
+```{r}
+data2 = read.csv("data_q2.csv")
+head(data2)
+```
+
+## a 
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** There is no significant different in the mean number of birds between forests in Michigan and Indiana.
+
+- **$H_A$ (Alternative hypothesis):** There is a significant difference in the mean number of birds between forests in Michigan and Indiana.
+
+## b 
+
+```{r}
+library(ggplot2)
+# create a boxplot
+plot2 <- ggplot(data2, aes(x = State, y = BirdNum, fill = State))
+boxplot <- plot2 + geom_boxplot()
+label_plot <- boxplot + labs(title  = "Number of Birds Seen Across States", x = "State", y = "Number of Birds Seen")
+print(label_plot)
+```
+
+From this box plot, there is different in the mean number of birds between forests in Michigan and Indiana.
+
+## c 
+
+**Answer**:
+
+**-**
+Since we are comparing the mean of a continuous variable (BirdNum) between two independent populations (Michigan and Indiana), we can use the independent sample T-test. The Shapiro-Wilk normality test was used to assess whether the data within each group were approximately normal distribution. 
+
+**-**
+The results show that the p values of both groups are less than 0.05, which indicates that the normal hypothesis is violated. However, we have large sample size, which is bigger than 30, so this assumption is still satisfied. The homogeneity test of variance showed that the p value was 0.417 and greater than 0.05. The hypothesis of variance homogeneity is satisfied.
+
+```{r}
+# Check normality assumption
+MI <- filter(data2, State=='Michigan')
+IN <- filter(data2, State=='Indiana')
+dim(MI)
+```
+
+```{r}
+shapiro.test(data2$BirdNum[data2$State == "Michigan"])
+```
+```{r}
+dim(IN)
+```
+
+
+```{r}
+shapiro.test(data2$BirdNum[data2$State == "Indiana"])
+```
+
+
+```{r}
+# Check homogeneity of variances assumption
+
+var(data2$BirdNum[data2$State == "Michigan"])
+```
+
+
+```{r}
+var(data2$BirdNum[data2$State == "Indiana"])
+```
+
+
+```{r}
+var.test(data2$BirdNum[data2$State == "Michigan"], data2$BirdNum[data2$State == "Indiana"])
+```
+
+
+## d 
+
+```{r}
+# Run welch two-sample t-test
+t.test(MI$BirdNum, IN$BirdNum)
+```
+
+**Answer**: 
+
+I used the Welch two-sample T-test to compare average bird populations in two states. The P-value= 7.288e-13 << alpha = 0.05. This shows that we can reject the null hypothesis and conclude that the average number of birds in the two states is significantly different.
+
+
+# Question 3 
+
+```{r}
+data3 <- read.csv("data_q3.csv")
+head(data3)
+```
+
+
+## a 
+```{r}
+# Calculate correlation
+cor(data3)
+```
+
+**Answer**:
+
+The correlation coefficient between temperature and number of cricket chirps is 0.7804302, this is mean that there is a strong correlation between them, with the number of crickets chirping tending to increase as temperature increased.
+
+## b 
+
+```{r message=FALSE}
+library(ggplot2)
+# create a scatter plot
+ggplot(data3, aes(x = Temperature, y = Chirps, col = "red")) + geom_point() + labs(title = "Temperature vs. Number of Cricket Chirps", x = "Temperature (°C)", y = "Number of Chirps per Hour")
+```
+
+
+## c 
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** There is no significant association between temperature and the average number of cricket chirps heard per hour.
+
+- **$H_A$ (Alternative hypothesis):** There is a significant association between temperature and the average number of cricket chirps heard per hour.
+
+## d 
+
+```{r}
+# check homogeneity of variances
+# Run linear regression model
+lr <- lm(Chirps ~ Temperature, data = data3)
+# get residual normality
+shapiro.test(residuals(lr))
+```
+```{r}
+# check homoscedasticity
+ncvTest(lr)
+```
+
+**Answer**: 
+
+**-**
+I used the scatter plot to check the linear relationship between the independent variable (temperature) and the dependent variable (chirps). 
+
+**-**
+According to the the shapiro.test, the p value is 0.62 > alpha = 0.05, we can not to reject the null hypothesis, he assumption of residual normality is satisfied. 
+
+**-**
+Then I used ncvTest to check the homoscedasticity, because the P-value is 0.39705 > alpha = 0.05, we can not to reject null hypothesis, so the assumption of homoscedasticity is satisfied. 
+
+**-**
+The results all met the assumptions of using linear regression analysis.
+
+## e
+```{r}
+summary(lr)
+```
+**Answer**: 
+
+**-**According to the results, the regression coefficient of temperature is 2.6636, and the p value is 2e-16 << alpha = 0.05, indicating that there is a significant positive correlation between temperature and chirps. In other words, as temperatures rise, so does the average number of chirps heard per hour. 
+
+**-**The multiple R-squared of the model is 0.6091, which means that the temperature in the model explains 60.91% of the variation in the dependent variable (the average number of chirps heard per hour), indicating that temperature plays an important role in explaining the change in the average number of chirps heard per hour.
+
+**-**
+The intercept is 35.1067. This means that when Temperature is zero, Chirps is predicted to be 35.1067. The p value is 8.04e-12 << alpha = 0.05, meaning the Chirps is significantly different from zero when Temperature is zero.
+
+**-**
+From the above, we can conclude that there is a significant positive correlation between temperature and the average number of chirps heard per hour. As the temperature rises, so does the average number of chirps heard per hour.
+
+## f
+
+**Answer**: 
+
+In this model, the multiple R squared is 0.6091, meaning that the independent variable temperature explains 60.91% of the variation in the dependent variable (the average number of chirps heard per hour). Therefore, the model accounts for some degree of variability. In this model, the residual standard error is 4.22, which is relatively large, indicating that the prediction accuracy of the model may not be high enough. Therefore, I think this model to be of average fit.
+
+# Question 4 
+
+```{r}
+data4=read.csv('data_q4.csv')
+head(data4)
+```
+
+
+## a 
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** There is no significant association between someone's social disposition and the type of pet they own.
+
+- **$H_A$ (Alternative hypothesis):** There is a significant association between someone's social disposition and the type of pet they own.
+
+## b 
+
+```{r}
+# Run chi-squared test
+chi_squared_test <- chisq.test(table(data4$social, data4$pet))
+
+# Print the result
+chi_squared_test
+
+```
+
+
+## c 
+
+**Answer**:
+
+With a P-value is 2.055e-06 less than the significance level (0.05), we can reject the null hypothesis and conclude that there is a significant association between someone's social disposition and pet type the own.
+
+
+

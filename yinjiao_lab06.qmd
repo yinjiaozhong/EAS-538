@@ -1,0 +1,237 @@
+---
+title: "Lab 6: Linear Regression"
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r include=FALSE}
+setwd("~/Desktop/EAS 538 Lab")
+```
+
+
+
+# Exercise 1
+```{r}
+data("airquality")
+head(airquality)
+?airquality
+```
+```{r}
+# get airqulity of scatter plot
+pairs(airquality[, c("Ozone", "Solar.R", "Wind", "Temp")])
+```
+
+
+```{r}
+cor(airquality[, c("Ozone", "Solar.R", "Wind", "Temp")], use = "complete.obs")
+```
+
+## Question 1.1
+
+**Answer**: 
+The correlation between `Ozone` and `Wind` is -0.6124966. As the ozone level increases, the wind speed will decrease. In my opinion, this is a moderate to strong negative correlation.
+
+## Question 1.2
+
+**Answer**:  
+The correlation between `Ozone` and `Solar.R` is 0.3483417. As the ozone level increases, the Solar R will increase. In my opinion, this is a weak to moderate positive correlation.
+
+# Exercise 2
+```{r}
+set.seed(15165)
+
+f <- function(x) {
+ y <- -(x+3)^2 + runif(length(x), min = -2, max = 2)
+}
+
+f1 <- function(x) {
+  y <- runif(length(x), min = min(x), max = max(x))
+}
+
+x <- seq(from = -6, to = 0, by = 0.005)
+var1 <- f(x)
+var2 <- f1(x)
+var3 <- x
+cor(var1, var2)
+cor(var1, var3)
+```
+
+
+```{r}
+plot(var2 ~ var1)
+```
+
+
+```{r}
+plot(var3 ~ var1)
+```
+
+## Question 2.1
+
+```{r}
+head(faithful)
+```
+
+
+```{r}
+# Plot waiting against eruptions
+plot(eruptions~waiting, data=faithful)
+```
+
+
+## Question 2.2
+
+```{r}
+# Calculate the correlation coefficient
+cor(faithful$eruptions, faithful$waiting)
+```
+
+
+# Exercise 3
+```{r}
+# Bulid linear model
+mod <- lm(Temp ~ Wind, data = airquality)
+summary(mod)
+```
+
+
+```{r}
+plot(Temp ~ Wind, data = airquality)
+abline(lm(Temp ~ Wind, data = airquality), col = "green")
+```
+
+## Question 3.1
+Notes: For full points, include model, interpretation and plot.
+
+For a complete interpretation, include slope significance (alpha and p-value), slope and R2 interpretation, and intercept value with alpha and p-value.
+
+```{r}
+# Build linear model
+mod <- lm(Temp ~ Ozone, data = airquality)
+summary(mod)
+```
+
+
+```{r}
+# Plot scatterplot with estimated regression line
+plot(Temp ~ Ozone, data = airquality)
+abline(lm(Temp ~ Ozone, data = airquality), col="green")
+```
+
+**Answer:**
+The slope of this linear regression model is 0.20081. This means for every 1 unit increase in ozone, the temperature increases by 0.20081. The P value of the slope is 2×10⁻¹⁶<< alpha=0.05. So we can reject $H_0$:slope=0, there is a significant relationship between ozone and temperature.
+
+R²=0.4877 of the variation in temperature is explained by ozone.
+
+The intercept is 69.41072. This means when ozone is zero, temperature is predicted to be 69.41072. The intercept has a p value of 2×10⁻¹⁶<< alpha=0.05, meaning when ozone is zero, the temperature is significantly different from zero.
+
+## Question 3.2
+Note: For full points, include model, interpretation and plot.
+
+```{r}
+# Build linear model
+mod <- lm(eruptions~waiting, data=faithful)
+summary(mod)
+```
+
+
+```{r}
+#Plot scatterplot with estimated regression line
+plot(eruptions~waiting, data=faithful)
+abline(mod, col='green')
+```
+
+**Answer:**
+The slope is 0.075628. This means for every 1 unit increase in waiting time, the eruption time increases by 0.075628. The P value of the slope is 2×10⁻¹⁶<< alpha=0.05. So we can reject $H_0$:slope=0, there is a significant relationship between waiting and eruptions.
+
+R²=0.8115 of the variation in eruptions is explained by waiting time.
+
+The intercept is -1.874016. This means when waiting time is zero, eruption time is predicted to be -1.874016. The intercept has a p value of 2×10⁻¹⁶<< alpha=0.05, meaning when waiting time is zero the eruption time is significantly different from zero.
+
+# Exercise 4
+
+## Question 4.1
+Note: To receive full credit, answer the three parts.
+
+```{r}
+mod <- lm(Temp~Wind, data=airquality)
+r2 <- summary(mod)$r.squared
+# Calculate SSY
+y <- airquality$Temp
+meany <- mean(y)
+diff <- y-meany
+SSY <- sum(diff^2)
+# Calculate SSYp
+x <- data.frame(Wind=airquality$Wind)
+predy <- predict.lm(mod, x)
+diff <- predy-meany
+SSYp <- sum(diff^2)
+# Calculate SSE
+diff <- predy-y
+SSE <- sum(diff^2)
+SSE
+```
+
+
+```{r}
+# Verify SSY - SSYp = SSE
+SSY-SSYp==SSE
+```
+
+**What is SSE measuring in non-technical terms?**:
+SSE is the sum of the squared deviations between the actual value and the predicted value. It’s measuring the amount of vairation not explained by the model.
+# Exercise 5
+
+## Question 5.1
+Note: Your final answer should include three parts: the model, tests for assumptions of homoscedasticity (perform all 3) and normality (perform both shapiro.test and qqPlot) and interpret of the results of homoscedasticity and normality tests.
+
+```{r message=F}
+library(lmtest)
+library(car)
+library(dplyr)
+# delete NAs
+dat.airquality <- airquality %>%
+  select(Temp, Ozone) %>%
+  na.omit()
+# Create linear model
+mod <- lm(Temp~Ozone, data=dat.airquality)
+summary(mod)
+```
+
+```{r}
+# Check whether the model meets assumptions
+plot(residuals(mod)~Ozone, data=dat.airquality,
+     main='Residuals v.s. Fitted', xlab='Fitted', ylab='Residuals')
+abline(h=0, col='green')
+```
+```{r}
+# Statistical test
+bptest(mod)
+```
+**Result**:
+The p value of the Breush-Pegan test is 0.0721 > alpha = 0.05. So we fail to reject $H_0$: The variance is constant. Therefore, the requirement of homoscedasticity is met.
+```{r}
+# get qqplot
+qqPlot(residuals(mod))
+```
+```{r}
+# Shapiro-Wilk test
+shapiro.test(residuals(mod))
+```
+**Result**:
+We could know some laid out of the intervals from the Q-Q plot. From the Shapiro-Wilk test, the p value is 0.000226 < alpha = 0.05. So we can reject $H_0$: the data being tested are drawn from a normally distributed population. Therefore, the requirement of residual normality is NOT met.

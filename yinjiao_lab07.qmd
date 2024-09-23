@@ -1,0 +1,170 @@
+---
+title: 'Lab 7: Multiple Linear Regression'
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab Setup
+Set my working directory and load libraries.
+
+```{r include=FALSE}
+setwd("~/Desktop/EAS 538 Lab")
+```
+
+```{r message=F}
+library(car)
+library(relaimpo)
+library(lmtest)
+library(stargazer)
+# get lab data
+yield <- read.csv('yielddata.csv')
+head(yield)
+```
+
+# Exercise 1
+
+## Question 1.1
+```{r}
+# get scatter plot
+pairs(yield[,3:12])
+```
+
+```{r}
+# get correlation of the continuous variables
+cor(yield[,3:12], use='complete.obs')
+```
+
+```{r}
+# get VIF
+vif(lm(data=yield, Yield~Canal_Dist+Irrigated_Per+Literate+Cultivator+AgLabor+Rain+Temperature+Elevation+SowDate))
+```
+**Answer**: 
+
+-From this scatter plot result, we could get some information about correlation of the continuous variables, such as Temperature and Elevation has strong negative correlation. 
+
+-As the correlation matrix shows, the correlation between Temperature and Elevation is 0.876, which is highest here. And the correlation between Temperature and Rain is 0.629. 
+
+-Then, we could know the VIF of Temperature is high, which is 6.082 bigger than 5 and means Temperature is highly correlated with other variables. So, in my model, Temperature leads to multi-collinearity; In addition, Elevation's VIF is 4.742, which is close to 5, which may also cause my model to appear multi-collinearity.
+
+## Question 1.2
+
+According to the result of correlation, we could know Temperature and Elevation are the most correlated variables.
+```{r}
+# get the univariate models of this two variables
+univarmod1 <- lm(Yield~Temperature, data=yield)
+univarmod2 <- lm(Yield~Elevation, data=yield)
+
+# get the multivariate model of this two variables
+multivarmod <- lm(Yield~Temperature+Elevation, data=yield)
+
+summary(univarmod1)
+```
+```{r}
+summary(univarmod2)
+```
+```{r}
+summary(multivarmod)
+```
+
+**Answer**: 
+
+-Although the P values of the beta coefficients are all small (<< alpha = 0.05), that is, they are all significantly different from 0, the coefficients of a univariate model are different from those of a multivariate model because the two variables are highly correlated, resulting in multi-collinearity. 
+
+-As a result, the model may assign some of the effects of one variable to another, making estimates of the coefficients unstable. This is why beta is different from univariate and multivariate models.
+
+# Exercise 2
+```{r}
+par(mfrow = c(1,2))
+hist(yield$Yield)
+```
+
+
+```{r}
+qqPlot(yield$Yield)
+```
+
+## Question 2.1
+```{r}
+fullmod2 <- lm(Yield ~ Canal_Dist + Irrigated_Per + Literate + Cultivator + AgLabor + Temperature + SowDate, data = yield)
+smallmod <- lm(Yield ~ Canal_Dist + Irrigated_Per + Temperature + SowDate, data = yield)
+
+# get the AIC
+AIC(fullmod2)
+```
+```{r}
+AIC(smallmod)
+```
+**Answer**: 
+
+According to the AIC of this two models, the full model has the smaller AIC. So, I would choose the full model.
+
+## Question 2.2
+```{r}
+## check the assumption of normality
+# run Q-Q plot
+qqPlot(residuals(fullmod2))  
+```
+```{r}
+# use Shapiro-Wilk test
+shapiro.test(residuals(fullmod2))  
+```
+**Answer**: 
+
+From the result of Q-Q plot, we could know the residuals are normally distributed. Then, according to the Shapiro-Wilk test, we can get the P-value is 0.778 > alpha = 0.05, so we can not reject null hypothesis: the residuals are normally distributed. Therefore, the requirement of residual normality is satisfied.
+
+```{r}
+## check the assumption of homoscedasticity
+plot(residuals(fullmod2)~fitted(fullmod2), main='Residuals v.s. Fitted')
+abline(h=0, col='blue')
+```
+
+```{r}
+# statistical tests
+bptest(fullmod2)
+```
+```{r}
+ncvTest(fullmod2)
+```
+
+**Answer**: 
+
+According to BP test and NCV test, P-value all of them < alpha = 0.05. So, we can reject null hypothesis: the variance is constant. Therefore, the requirement of residual normality is not satisfied.
+
+## Question 2.3
+```{r}
+summary(fullmod2)
+```
+```{r}
+summary(univarmod1)
+```
+**Answer**: 
+
+-From the summary of the full model, the intercept(P-value = 2e-16 << alpha = 0.05), Temperature(P-value = 1.27e-12 << alpha = 0.05), and SowDate(P-value = 0.0141 < alpha = 0.05) are significant. The absolute value of the Temperature beta coefficient of the multivariate model (|-142.9815|) is smaller than that of the univariate model (|-186.4|). 
+
+-This is because the effect of temperature on yield in a multivariate model will be smaller than that in a univariate model that only considers temperature, compared to other dependent variables.
+
+# Exercise 3
+
+## Question 3.1
+```{r}
+calc.relimp(fullmod2, type=c('lmg'), rela=TRUE)
+```
+**Answer**: 
+
+Based on the relative importance metrics, Temperature explains the most variance (0.59), SowDate explains the second most, and Canal_Dist(0.006) explains the least variance.

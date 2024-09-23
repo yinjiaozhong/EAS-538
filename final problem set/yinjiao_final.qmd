@@ -1,0 +1,350 @@
+---
+title: "Fnial Problem Set"
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lab Setup
+Set your working directory and load libraries.
+```{r include=FALSE}
+library(magrittr)
+library(dplyr)
+library(car)
+library(ggplot2)
+setwd("~/Desktop/EAS 538 Lab/final problem set")
+```
+
+
+[x] I attest that I worked on this problem set individually
+
+[x] I attest that I only spoke to Kai or Yi or Shike about this exam
+
+# Assignment
+
+## Question 1 
+
+(Check out instructions and load the dataset) 
+```{r}
+data1 <- read.csv("data_q1.csv")
+head(data1, 3)
+```
+
+
+### Please write the null and alternate hypothesis (1 point).
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** 
+
+There is no significantly different between the mean quiz scores(`socres`) based on the type of beverage consumed prior to the exam (`drink`).
+
+- **$H_A$ (Alternative hypothesis):**
+
+There is a significantly different between the mean quiz scores(`socres`) based on the type of beverage consumed prior to the exam (`drink`).
+
+### Please create a visual plot or table to answer this question (1 point).
+
+```{r}
+# create a visual plot
+ggplot(data1, aes(x = drink, y = scores)) + geom_boxplot(fill = "blue") + labs(x = "Drink or Not", y = "Scores") + ggtitle("Quiz Scores of Students Drink/Not Drink Coffee Before the Exam")
+```
+**Answer**:
+
+From the plot, the two group is different between their mean scores. Students drinking coffee preexam seem to have a higher mean score.
+
+### Please decide what statistical test to use and check whether your data meet the assumptions to run this test (2 points).
+
+**Answer**:
+
+Based on the boxplot, we can proceed with a one-way ANOVA test since we have multiple groups `beverage types` to compare and the variable `quiz scores` is continuous.
+
+```{r}
+# get 2 groups
+group1 <- filter(data1, drink=='coffee')
+group2 <- filter(data1, drink=='nocoffee')
+```
+
+
+```{r}
+## check equal variance
+var(group1$scores)
+```
+
+```{r}
+var(group2$scores)
+```
+
+```{r}
+var.test(group1$scores, group2$scores)
+```
+
+
+```{r}
+# Checking normality assumption
+dim(group1)
+```
+
+```{r}
+dim(group2)
+```
+
+```{r}
+shapiro.test(group1$scores)
+```
+```{r}
+shapiro.test(group2$scores)
+```
+
+Our data is continuous, and all samples are randomly selected from the population, observations are independent. In the `var.test()`, the p-value > alpha = 0.05, we can not reject null hypothesis, which means there are equal variance. In the two `shapiro.test`, the p-value are both greater than alpha = 0.05, we can not reject null hypothesis, which means they met the normality.
+
+### Please run the statistical test and interpret the result (1 point). Which group(s) are significantly different from one another (if any)? How are they different?
+
+```{r}
+# run T test
+t.test(group1$scores, group2$scores, var.equal=T)
+```
+
+**Answer**: 
+
+According to the two sample t-test, the p-value is 1.04e-06 < alpha = 0.05, we can reject null hypothesis, which means there is a significant difference between the mean quiz scores based on the type of beverage consumed prior to the exam. The mean score of the students drinking coffee (97.4) is higher than that of no coffee (83.9).
+
+## Question 2 
+
+(Check out instructions and load the dataset) 
+```{r}
+data2 = read.csv("data_q2.csv")%>%
+  mutate(drink=as.factor(drink))
+head(data2, 3)
+```
+```{r}
+table(data2$drink)
+```
+
+
+### Please write the null and alternate hypothesis (1 point).
+
+**Answer**:
+- **$H_0$ (Null hypothesis):** 
+
+There is no difference in the quiz scores of the 3 student groups.
+
+- **$H_A$ (Alternative hypothesis):**
+
+ At least one of the 3 student groups has different mean scores comparing to the others.
+
+### Please create a visual plot or table to answer this question (1 point).
+
+```{r}
+# Plotting boxplot
+boxplot(scores ~ drink, data = data2, 
+        xlab = "Drink",
+        ylab = "Quiz Scores",
+        main = "Quize Scores of Students Drinking Different Drinks")
+```
+From the plot, the mean score of the no-coffee group seems a bit lower than others.
+
+### Please decide what statistical test to use and check whether your data meet the assumptions to run this test (2 points).
+
+**Answer**:
+
+We can use Analysis of Variance (ANOVA) to test for significant differences in quiz scores between different beverage groups. Before running ANOVA, we need to check for the assumptions.
+
+```{r}
+# get each group
+drink1 <- filter(data2, drink=='coffee')
+drink2 <- filter(data2, drink=='nocoffee')
+drink3 <- filter(data2, drink=='tea')
+
+# check size of group
+dim(drink1)
+```
+```{r}
+dim(drink2)
+```
+```{r}
+dim(drink3)
+```
+
+```{r}
+# Levene's test for homogeneity of variances
+leveneTest(scores ~ drink, data = data2, center = mean)
+```
+```{r}
+# check normality
+shapiro.test(drink1$scores)
+```
+```{r}
+shapiro.test(drink2$scores)
+```
+```{r}
+shapiro.test(drink3$scores)
+```
+Our data is continuous, and all samples are randomly selected from the population, observations are independent. From the result of `leveneTest()`, the p-value = 0.73 > alpha = 0.05, we can not reject null hypothesis, which means they are equal variance. And from `shapiro.test`, it seems that all three groups have p-values greater than alpha = 0.05, indicating that we can not reject the null hypothesis of normality for each group. This suggests that the assumption of normality is met.
+
+
+### Please run the statistical test and interpret the result (1 point). Which group(s) are significantly different from one another (if any)? How are they different?
+
+```{r}
+# run ANOVA test
+aov <- aov(scores~drink, data=data2)
+summary(aov)
+```
+```{r}
+# run Tukey-Kramer test
+TukeyHSD(aov)
+```
+**Answer**: 
+
+From the `aov()`, the p-value is 1.1e-05 < alpha = 0.05, we can reject the null hypothesis, which means at least one of the 3 student groups has different mean scores comparing to the others. From the `dim()`, these groups are of different sizes, therefore we use Tukey Kramer to do the post-hoc test. From the result, the mean score of the `nocoffee` group is significantly lower than that of the `coffee` group (p-value = 0.0000054 < alpha = 0.05), the mean score of the `tea` group is significantly lower than that of the `nocoffee` group (p-value = 0.005 < alpha = 0.05).
+
+
+## Question 3 
+
+(Check out instructions and load the dataset)
+```{r}
+data3 <- read.csv("data_q3.csv")
+head(data3, 3)
+```
+
+
+### Please write the null and alternate hypothesis (1 point).
+
+**Answer**:
+- **$H_0$ (Null hypothesis):** 
+
+There is no significant difference in final grades based on the primary material students used to study for the final exam.
+
+- **$H_A$ (Alternative hypothesis):**
+
+There is a significant difference in final grades based on the primary material students used to study for the final exam.
+
+### Please create a visual plot or table to answer this question (1 point).
+
+```{r}
+table.data3 <- table(data3$studytype, data3$grade)
+table.data3
+```
+From the table, students using textbook as their primary study material seem to have lower grades.
+
+
+### Please decide what statistical test to use and check whether your data meet the assumptions to run this test (2 points).
+
+**Answer**:
+
+Based on the data, I will utilize the chi-square test. The assumptions for the chi-square test are met: the data consist of counts or frequencies, the categories are mutually exclusive, and all cells have more than 5 observations, satisfying the requirement for accurate analysis. 
+
+
+### Please run the statistical test and interpret the result (1 point). Which group(s) are significantly different from one another (if any)? How are they different?
+
+```{r}
+chisq.test(table.data3)
+```
+
+**Answer**: 
+
+According to the Chi-square test result, the p-value is 0.001 < alpha = 0.05, we can reject the null hypothesis, which means there is a significant difference in final grades based on the primary material students used to study for the final exam, with students choosing to use textbooks more likely to have Cs and Bs and less likely to have As, and students choosing to use lectures more likely to have grades above B.
+
+## Question 4 
+
+(Check out instructions and load the dataset)
+```{r}
+data4=read.csv('data_q4.csv')
+head(data4, 3)
+```
+
+
+### Please decide which statistical test to use and please identify which model you are going to run (1 point).
+
+**Answer**:
+
+In our data, we have multiple continuous arguments, a categorical argument, and a continuous response variable. Therefore, I will use ANCOVA in the linear regression framework.
+
+```{r}
+# check multicollinearity
+lm4 <- lm(scores~drink+textbook+sleep, data=data4)
+vif(lm4)
+```
+It can be seen from the result that the VIF of each variable is about 1, indicating that the correlation between the variables is low. So I don't need to worry about multicollinearity and will use the full model.
+
+
+### Please write the null and alternate hypotheses (1 point).
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** 
+
+There is no significant relationship between quiz 1 scores and all the factors.
+
+- **$H_A$ (Alternative hypothesis):**
+
+There is a significant relationship between quiz 1 scores and one or more of the factors.
+
+### Please check whether your data meet the assumptions to run this test (1 point).
+
+```{r}
+# check the distribution
+hist(data4$scores)
+```
+
+```{r}
+# check linear relationship
+par(mfrow=c(1, 2))
+plot(scores~textbook, data=data4)
+plot(scores~sleep, data=data4)
+```
+```{r}
+# check homoscedasticity
+ncvTest(lm4)
+```
+
+```{r}
+# check residual normality
+shapiro.test(residuals(lm4))
+```
+**Answer**:
+
+From the result, we could know there is a linear relationship between the variables. For the hypothesis of statistical independence of error, our hypothesis is valid. As for the homoscedasticity, the p-value is 0.95 > alpha = 0.05, we cannot reject the null hypothesis, which means the data met homoscedasticity. For the residual normality hypothesis, the p-value is 0.72 > alpha = 0.05, we cannot reject the null hypothesis, which means the data met the residual normality.
+
+### Please run the statistical test and interpret the result. Which variables are significantly associated with quiz scores? Please write out one sentence for each significant beta coefficient explaining what it means in non-technical terms (2 points).
+
+```{r}
+summary(lm4)
+```
+
+**Answer**: 
+
+From the result, we could know `intercept`, `drinknocoffee`, `textbook`, `sleep` are significant coefficients.
+
+For `intercept`, with zero time spent reading textbooks and sleeping before the quiz, students who were expected to drink coffee before the quiz scored an average of 29.3.
+
+For `drinknocoffee`, after controlling for other continuous variables, students who did not drink coffee before the quiz scored an average of 4.4 points less than those who did.
+
+For `textbook`, for every hour spent reading a textbook, the score increases by 1.9 points.
+
+For `sleep`, for every hour of sleep before the test, scores increased by 4.1 points.
+
+For `drinktea`, after controlling for other continuous variables, there was no significant difference in test scores between tea and coffee drinkers.
+
+### Discuss the fit of your model and whether you think it is a good or bad fit. Why (1 point)?
+
+**Answer**:
+
+From the result, the Adjusted R-squared is 0.67, which means the independent variables in the model explain 67% of the variation in the score. The p-value is 2.2e-16 < alpha = 0.05, which means there is a significant relationship, therefore, I think this model is a good fit.
+
+

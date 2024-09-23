@@ -1,0 +1,381 @@
+---
+title: "Problem Set 2 - Answer key"
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(car)
+setwd("~/Desktop/EAS 538 Lab/problem set2")
+```
+
+# Question 1 
+
+
+## A
+
+**Answer**:
+
+- **$H_0$ (Null hypothesis):** There is no significant difference in student's heart rate when opening up R before and after taking EAS 538.
+
+- **$H_A$ (Alternative hypothesis):** There is a significant difference in student's heart rate when opening up R before and after taking EAS 538.
+
+## B
+```{r}
+# read data_q1
+data1 <- read.csv("data_q1.csv")
+head(data1, 3)
+```
+```{r}
+# get box plot
+boxplot(rate ~ when, data = data1, main = "Heart Rate Before and After EAS 538", xlab = "Time", ylab = "Heart Rate", col = c("red", "blue"))
+```
+**Answer**:
+
+From the box plot, the mean of group “after” seems higher than the group “before”.
+
+
+## C
+
+```{r}
+# check if the data meets the assumption of normality
+shapiro.test(data1$rate[data1$when == "before"])
+shapiro.test(data1$rate[data1$when == "after"])
+```
+
+```{r}
+data1_1 <- data1 %>%
+  pivot_wider(names_from=when, values_from=rate) %>%
+  mutate(diff=after-before)
+head(data1_1)
+```
+```{r}
+# check if the data meets the assumption of normality after converting the data
+dim(data1_1)
+```
+```{r}
+shapiro.test(data1_1$diff)
+```
+**Answer**:
+
+This data met continuous, and the sample is randomly selected from the population, then the observations also are independent. From shapiro test, the values are nearly normal or sample size is large enough, and because P-value = 0.2 > alpha = 0.05, we can not reject null hypothesis, it means that our data meet the assumption of normal distribution.
+
+## D
+```{r}
+# run paired t-test
+t.test(data1_1$after, data1_1$before, paired = TRUE)
+```
+**Answer**:
+
+According to paried t-test, because P-value = 8.502e-05 < alpha = 0.05, we can reject the null hypothesis, this means there is a significant difference in student’s heart rate when opening up R studio before and after taking EAS 538. After raking EAS 538 is significant different from one another, specifically, after raking EAS 538, the students' heart rate increased by an average of about 3.25 beats per minute.
+
+# Question 2 
+
+## A
+
+```{r}
+# read data
+data2 = read.csv("data_q2.csv")
+head(data2)
+```
+**Answer**:
+
+Because we want to which factors are significantly associated with more shares of a post using multiple linear regression, but `paid` only included 0 and 1, so I'd like to choose other variables in my model.
+
+```{r}
+# check if the data meets the assumptions
+# check correlation
+cor1 <- cor(data2[, c("users", "comment", "like")])
+print(cor1)
+```
+```{r}
+vif(lm(share~type+paid+users+comment+like, data=data2))
+```
+**Answer**:
+
+This result shows good, and none of the continuous variables has a correlation coefficient with `share` larger than 0.7, or VIF>5. Therefore, I am using all of them to fit the linear regression model.
+
+## B
+
+- **$H_0$ (Null hypothesis):** 
+
+There is no significant association between the factors and the more shares of a post.
+
+- **$H_A$ (Alternative hypothesis):** 
+
+At least one of the factors is significantly associated with the more shares of a post.
+
+## C
+```{r}
+# check the distribution of the dependent variable
+hist(data2$share)
+```
+```{r}
+data2.t <- data2 %>%
+  mutate(share.log=log(share))
+hist(data2.t$share.log)
+```
+```{r}
+# run linear model
+lmod <- lm(share.log~users+comment+like+type+paid, data=data2.t)
+# get linear relationship
+par(mfrow=c(1,3))
+plot(share.log~users, data=data2.t)
+plot(share.log~comment, data=data2.t)
+plot(share.log~like, data=data2.t)
+```
+```{r}
+# check homoscedasticity
+ncvTest(lmod)
+```
+```{r}
+# check residual normality
+shapiro.test(residuals(lmod))
+```
+**Answer**:
+
+According to the plots, the linear relationship between the variables is met. Because in checking homoscedasticity, p-value = 0.0003 < alpha = 0.05, we can reject the ncvtest null hypothesis, which means the the assumption of homoscedasticity is not met. About checking the residual normality, the p-value = 0.001 < alpha = 0.05, so we can reject the shapiro test null hypothesis, which means the assumption of residual normality is not met.
+
+
+## D
+```{r}
+# run multiple linear regression model
+summary(lmod)
+```
+**Answer**:
+
+-From the multiple linear regression result, because the P-value of `typeVideo`, `typeStatus` and `like` are less than alpha = 0.05, we could reject null hypothesis, which means `typeVideo`, `typeStatus` and `like` are significantly associated with the more shares of a post. 
+
+-The p-value of `users`, `comment`, `typePhoto` and `paid` are greater than alpha = 0.05, we can not reject null hypothesis, which means `users`, `comment`, `typePhoto` and `paid are not significantly associated with the more shares of a post. 
+
+-The estimated value of the intercept is 2.444e+00, which means that when the values of all variables are 0, the average number of `shares` is 2.444e+00.
+
+-Regression coefficient of `typeVideo` is 6.682e-01 which means when `typeVideo` increase for every one-unit, the `share` of posts will increases by 6.682e-01 units.
+
+-Regression coefficient of `typeStatus` is 4.357e-01, which means for every one-unit increase in the number of `comment`, the average `share` of posts increases by 4.357e-01 units.
+
+-Regression coefficient of `like` is 1.712e-03, which means for every one-unit increase in the number of likes, the average `share` of posts increases by 1.712e-03 units.
+
+
+## E
+
+The adjusted R-squared is 0.4318, which means the independent variables in the model explains 43.18% of the variation in the dependent variable (more shares of a post). Because the P-value of F-statistic is 2.2e-16 < alpha = 0.05, we can reject null hypothesis, which shows high significance. Therefore, the fit of my model is good.
+
+# Question 3 
+```{r}
+# read in the data
+data3 <- read.csv("data_q3.csv")
+head(data3)
+```
+
+## A
+
+- **$H_0$ (Null hypothesis):** There is no significant difference in the number of calories based on the different type of hot dog.
+
+- **$H_A$ (Alternative hypothesis):** At least one of the types of hot dog differ in calories from others.
+
+## B
+```{r}
+# get a visual plot
+boxplot(Calories ~ Type, data = data3, main = "Calories in Different Types of Hot Dogs", xlab = "Hot Dog Type", ylab = "Calories", col = c("red","green","blue"))
+```
+
+## C
+
+```{r}
+# check Equal Variance
+leveneTest(Calories~Type, data3, center=mean)
+```
+```{r}
+# check the assumption of normality distribution
+beef <- filter(data3, Type=='beef')
+deer <- filter(data3, Type=='deer')
+poultry <- filter(data3, Type=='poultry')
+dim(beef)
+```
+```{r}
+dim(deer)
+```
+```{r}
+dim(poultry)
+```
+```{r}
+shapiro.test(beef$Calories)
+```
+```{r}
+shapiro.test(deer$Calories)
+```
+```{r}
+shapiro.test(poultry$Calories)
+```
+**Answer**:
+
+This data met continuous, and the sample is randomly selected from the population, then the observations also are independent. From the shapiro test, P-value of all types are greater alpha = 0.05, so we can not reject null hypothesis, which means all types meet the assumption of normality. From leventest, P-values are greater alpha = 0.05, so we can not reject null hypothesis, which means they meet the assumption of homogeneity of variances.
+
+## D
+```{r}
+anova_result <- aov(Calories ~ Type, data = data3)
+summary(anova_result)
+```
+
+```{r}
+# run Tukey's HSD
+tukey_result <- TukeyHSD(anova_result)
+print(tukey_result)
+```
+
+```{r}
+plot(tukey_result)
+```
+
+**Answer**:
+
+-From the anova result, the P-value is 2e-16 << alpha = 0.05, so we can reject null hypothesis, which means there is a significant difference in the number of calories based on the different type of hot dog. 
+
+-From Tukey's HSD, the diff of deer-beef is 2.63, the p adj of deer-beef is 0.056 > alpha = 0.05, so we can not to reject null hypothesis, which means there is no significant difference between deer and beef. 
+
+-The diff of poultry-beef is 36.89, and the diff of poultry-deer is 39.51, the p adj of poultry-beef and poultry-deer is less than alpha = 0.05, so we can reject null hypothesis, which means there is a significant difference between poultry and beef and between poultry and deer.
+
+
+# Question 4 
+```{r}
+data4=read.csv("data_q4.csv")
+head(data4)
+```
+
+## A
+
+**Answer**:
+
+I will use a multiple linear regression model to analyze the relationship between `sucrose` levels and predictor variables, which include `weight`, `days.old`, and `cactus.type`.
+
+## B
+```{r}
+cor(data4[,2:3])
+```
+
+
+```{r}
+vif(lm(sucrose ~ weight + days.old + cactus.type, data=data4))
+```
+```{r}
+hist(data4$sucrose)
+```
+
+```{r}
+data4 <- data4 %>%
+  mutate(sucrose.log=log(sucrose))
+hist(data4$sucrose.log)
+```
+
+```{r}
+lmod <- lm(sucrose.log~weight+days.old+cactus.type, data=data4)
+# Linear relationship
+par(mfrow=c(1,2))
+plot(sucrose.log~weight, data=data4)
+plot(sucrose.log~days.old, data=data4)
+```
+
+
+```{r}
+# check homoscedasticity
+ncvTest(lmod)
+```
+
+```{r}
+# check residual normality
+shapiro.test(residuals(lmod))
+```
+
+**Answer**:
+
+-From the shapiro test, P-value is 0.35 > alpha = 0.05, so we can not reject null hypothesis, which it meet the assumption of normality.
+
+-From the scatter plot, we can know `sucrose` and `weight` is a linear relationship, but `sucrose` and `days.old` is not a linear relationship.
+
+-From the plot of homoscedasticity, we could know the data meets the assumption of homoscedasticity.
+
+-From VIF, we could the VIF values of the variables are all lower than the standard threshold for the existence of multicollinearity (usually 5 or 10), which indicates that the correlation between the respective variables is low and there is no serious multicollinearity problem.
+
+## C
+```{r}
+summary(lmod)
+```
+**Answer**:
+
+-For `weight`, the p-value is 4.04e-13 < alpha = 0.05, so we can reject null hypothesis, which means there is a significant positive correlation between `weight` and `sucrose`. In other words, the heavier the fruit, the higher `sucrose` it is likely to be.
+
+-For `days.old`, the p-value is 0.49915 > alpha = 0.05, so we can not reject null hypothesis, which means there is no significant correlation between `days.old` and `sucrose`.
+
+-For `cactus.typeMamey`, the coefficient is -0.215908, the p-value is 0.00591 < alpha = 0.05, so we can reject null hypothesis, which means there is a significant correlation between `cactus.typeMamey` and `sucrose`, and the fruits of the Mamey variety have a significantly lower `sucrose` than those of other varieties.
+
+-For `cactus.typeTenamaxtle`, the coefficient is -0.255828, the p-value is1.69e-05 << alpha = 0.05, so we can reject null hypothesis, which means there is a significant correlation between `cactus.typeTenamaxtle` and `sucrose`, and the fruits of the Tenamaxtle variety have a significantly lower `sucrose` than those of other varieties.
+
+-For `cactus.typeWild`, the coefficient is -0.089505 , the p-value is 0.11323 > alpha = 0.05, so we can not reject null hypothesis, which means there is no significant correlation between `cactus.typeWild` and `sucrose`.
+
+## D
+```{r}
+lmod2 <- lm(sucrose.log~weight+cactus.type*days.old, data=data4)
+summary(lmod2)
+```
+
+**Answer**:
+
+-For `days.old:cactus.typeMamey`, the slope is -0.063837, the p-value is 0.02637< alpha = 0.05, so we can reject null hypothesis, which means there is a significant correlation between `days.old:cactus.typeMamey` and `sucrose`, and as the fruit ages, the `sucrose` of the Mamey variety may decrease slightly.
+
+-For `days.old:cactus.typeTenamaxtle`, the slope is -0.1135201, the p-value is 0.00576 < alpha = 0.05, so we can reject null hypothesis, which means there is a significant correlation between `days.old:cactus.typeTenamaxtle` and `sucrose`, and as the fruit ages, the `sucrose` of the Tenamaxtle variety may decline more significantly.
+
+-For `days.old:cactus.typeWild`, the slope is -0.0367754, the p-value is 0.38691 > alpha = 0.05, so we can not reject null hypothesis, which means there is no significant correlation between `days.old:cactus.typeWild` and `sucrose`.
+
+## E 
+```{r}
+library(ggplot2)
+ggplot(data4, aes(x = days.old, y = sucrose, color = cactus.type)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Days Old", y = "Sucrose Levels(%)", title = "Relationship between Sucrose Levels and Days Old by Cactus Type")
+```
+
+# Extra Credits
+```{r}
+library(lme4)
+data(sleepstudy)
+summary(sleepstudy)
+```
+
+
+```{r}
+library(Matrix)
+library(lme4)
+mixed_model <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
+summary(mixed_model)
+```
+
+**Answer**:
+
+-The results show that the estimated intercept value is 251.41, the standard error is 9.75, and the corresponding T-value is 25.79. The estimated value of Days is 10.47, the standard error is 0.80, and the corresponding T-value is 13.02, which indicats the impact of intercept and `days` on `reaction` time is significant.
+
+-In random effects, the model takes into account the variability between different subjects. The results showed that the variance between subjects was estimated to be 1378.2 with a standard deviation of 37.12, while the residual variance was estimated to be 960.5 with a standard deviation of 30.99.
+
+
+
+
+
+
+

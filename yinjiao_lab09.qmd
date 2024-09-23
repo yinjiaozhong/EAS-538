@@ -1,0 +1,127 @@
+---
+title: 'Lab 9: Fixed vs random effects'
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab Setup
+Set your working directory and load libraries.
+
+```{r}
+# Set working directory
+setwd("~/Desktop/EAS 538 Lab")
+# Read in data
+nwork = read.csv('networking2.csv',stringsAsFactors = TRUE)
+head(nwork, 3)
+```
+```{r}
+lmod = lm(wages~networking,data=nwork)
+summary(lmod)
+```
+```{r}
+nwork$school = relevel(nwork$school, ref = 'SEAS')
+lmod2 = lm(wages ~ networking + school, data = nwork)
+summary(lmod2)
+```
+
+# Exercise 1
+
+**Answer**:
+
+-Research project: examining the impact of group study sessions on individual academic performance.
+
+-Potential omitted variable: prior academic achievement. Students with higher previous academic performance will be more likely to participate in group study sessions and may have better individual academic outcomes. Failure to control for prior academic achievement could lead to biased estimate of the effect of group study sessions on individual academic performance, as if may falsely attribute academic improvement solely to group study without considering the influence of students' baseline academic abilities.
+
+# Exercise 2
+
+```{r}
+irrdata = read.csv('irrdata.csv')
+head(irrdata, 3)
+```
+```{r}
+lmod3 = lm(yield ~ irrigation, data = irrdata)
+summary(lmod3)
+```
+```{r}
+table(irrdata$state)
+```
+```{r}
+lmod4 = lm(yield ~ irrigation + state, data = irrdata)
+summary(lmod4)
+```
+
+## Question 2.1
+```{r}
+summary(lmod3)
+summary(lmod4)
+```
+
+
+**Answer**:
+
+-Differences:
+
+--The beta coefficients are not the the same
+
+--`lmod4`’s F-statistic decreases
+
+-Similarities:
+
+-Significant:They are similar in that both models show that `irrigation` has a positive effect on yield and is statistically significant, because their P-value < alpha = 0.05, we can reject null hypothesis.
+
+-R-squared being similar
+
+-Residual standard error being similar
+
+
+## Question 2.2
+
+**Answer**:
+
+The beta coefficient of `irrigation` changes because the model takes into account the difference between `Punjab` and `Bihar`. In `Punjab`, maybe farmers are wealthier, with better resources and farming practices, so the effectiveness of `irrigation` may be affected by other factors, such as better soil management or higher quality seeds. Therefore, by including states as a fixed effect, the model can control for these differences to more accurately estimate the impact of `irrigation` on yields, making the results more confident.
+
+# Exercise 3
+
+## Question 3.1
+```{r}
+lakedf = read.csv('lakedf.csv')
+head(lakedf, 3)
+```
+```{r}
+lmod5 = lm(prod ~ diversity + temp + rain + sun, data = lakedf)
+summary(lmod5)
+```
+```{r}
+library(nlme)
+mod = lme(prod ~ diversity + temp + rain + sun, random = ~1|lake, data = lakedf)
+summary(mod)
+```
+
+**Answer**:
+
+The beta coefficients of continuous variables are similar, and the P-values of continuous variables are similar. For intercepts, although the P-values of the two models are similar, the beta coefficient of the intercept is different, which is due to the random effects added to the intercepts of the second model.
+
+
+## Question 3.2
+
+**Answer**:
+
+In previous courses, I tried to use the performance data of multiple students in different courses to understand the impact of individual student differences on grades and how differences between courses affect grades. In this case, the random effects model can better capture the random variation between individual student differences and courses. By treating students as random effects, models can estimate fixed effects while taking into account random variation between individuals or groups, allowing for a more accurate assessment of the impact of these effects on achievement.
+
+

@@ -1,0 +1,202 @@
+---
+title: 'Lab 8: ANCOVA and interactions'
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab Setup
+
+```{r}
+library(car)
+# Set working directory
+setwd("~/Desktop/EAS 538 Lab")
+# Read in data
+dataset <- read.csv(file = "sanddata.csv", sep = ",", header = T,comment.char = "#")
+head(dataset, 3)
+```
+
+
+# Exercise 1
+
+```{r}
+cor(dataset[,-6],dataset[,-6])
+```
+```{r}
+linmod <- lm(juveniles ~ sand + temperature + rainfall + humanpop + country, data = dataset)
+par(mfrow = c(1,2))
+plot(juveniles ~ sand, data = dataset)
+plot(juveniles ~ temperature, data = dataset)
+plot(juveniles ~ rainfall, data = dataset)
+plot(juveniles ~ humanpop, data = dataset)
+```
+```{r}
+par(mfrow = c(1,2))
+plot(linmod)
+```
+```{r}
+summary(linmod)
+```
+
+## Question 1.1
+
+**Answer**:
+
+- As the result, we can know there is no multicollinearity between these variables from cor table. 
+
+- Because P-value of intercept is 2e-16 << alpha = 0.05, we can reject null hypothesis. While all independent variables were 0, baseline country of China has juveniles crane significantly not 0, and the expected value is 4603.65570.
+
+- For the `temperature` variable, the P-value is 1.73e-08 << alpha = 0.05, we can reject null hypothesis, there is a significant relationship between `temperature` and `juveniles`, this means for each additional unit of `temperature`, the number of juvenile cranes decreased by 76.81. 
+
+- For the `humanpop` variable, the P-value is 0.005104 < alpha = 0.05, we can reject null hypothesis, there is a significant relationship between `humanpop` and `juveniles`, this means for each additional unit of `humanpop`, the number of juvenile cranes decreased by 0.39505.
+
+- For the `countryMalaysia` variable, the P-value is 0.000369 < alpha = 0.05, we can reject null hypothesis, there is a significant relationship between `countryMalaysia` and `juveniles`, this means for each additional unit of `countryMalaysia`, the number of juvenile cranes decreased by 190.48339 compared to baseline country China.
+
+- Because the multiple R-squared is 0.2125, this means this model could explain 21.25% of the variation in the number of juvenile cranes.
+
+
+## Question 1.2
+
+**Answer**: 
+
+- For the `rainfall` variable, the P-value is 0.427860 > alpha = 0.05, we can not to reject null hypothesis, this means there was no significant correlation between `rainfall` and the number of juvenile cranes.
+
+- For the `countryIndia` variable, the P-value is 0.526092 > alpha = 0.05, we can not to reject null hypothesis, this means there was no significant correlation between `countryIndia` and the number of juvenile cranes.
+
+- For the `countryIndonesia` variable, the P-value is 0.379619 > alpha = 0.05, we can not to reject null hypothesis, this means there was no significant correlation between `countryIndonesia` and the number of juvenile cranes, while all independent variables held constant.
+
+# Exercise 2
+
+## Question 2.1
+
+```{r}
+table(dataset$country)
+```
+```{r}
+dataset$country <- as.factor(dataset$country)
+dataset$country <- relevel(dataset$country, ref = 'India')
+linmod2 <- lm(juveniles ~ sand + temperature + rainfall + humanpop + country, data = dataset)
+summary(linmod2)
+```
+
+**Answer**:
+
+Comparing the results of the two models, the four variable coefficients of `sand`, `temperature`, `rainfall` and `humanpop` did not change. In the original model, the coefficient for India is -33.74344, while in the new model, the coefficient for China was 33.74344. The coefficients for Indonesia from -46.85508 to -13.11165, and Malaysia from -190.48339 to -156.73996 are changed. This is because in the new model, India is specified as the intercept, so the coefficients for other countries are reestimated relative to the effect for India.
+
+## Question 2.2
+
+```{r}
+anomod <- aov(juveniles ~ sand + temperature + rainfall + humanpop + country, data = dataset)
+leveneTest(juveniles ~ country, data = dataset)
+```
+```{r}
+summary(anomod)
+```
+```{r}
+TukeyHSD(anomod)
+```
+
+**Answer**:
+
+From the `TukeyHSD` test, we can reject the null hypothesis that `Malaysia-China`, `Malaysia-India`, `Malaysia-Indonesia` are significantly different from one another, because their P-value < alpha = 0.05. For the `TukeyHSD` test, we know how the number of juvenile cranes varies from different countries, and which countries have significant differences. This information is not directly available when running a linear model `linmod`, which only provides coefficients for each country and does not provide a direct comparison between them. The `TukeyHSD` test provides us with accurate estimates and confidence intervals of mean differences between variables, taking into account multiple comparisons.
+
+## Question 2.3 
+
+```{r}
+anomod3 <- aov(juveniles ~ temperature + rainfall + humanpop + country + sand,data = dataset)
+summary(anomod3)
+```
+```{r}
+summary(anomod)
+```
+
+**Answer**:
+
+- They have same variables significant such as `sand`, `temperature`, `humanpop` and `country`, but `rainfall` is no significant because p-value > alpha = 0.05. 
+
+- The difference in p-values for variables expect sand between `anomod` and `anomod3` occurs due to the sequential nature of how an `ANOVA` works, which is different from how it's done in a linear regression model.
+
+- Variables that enter the sequence earlier in `anomod3` show a smaller p-value compared to `anomod` because they account for more of the variation. In contrast, variables entered later have larger p-values because they explain less variation.
+
+
+# Exercise 3
+
+## Question 3.1
+
+```{r}
+# get interaction term between humanpop and country
+dataset$country <- relevel(dataset$country, ref = 'China')
+linmod5 <- lm(juveniles ~ sand + temperature + rainfall + humanpop + 
+    country + humanpop*country, data = dataset)
+summary(linmod5)
+```
+
+```{r}
+plot(1:1000, rep(-100, 1000), ylim = c(4000, 5500), xlim = c(50, 1000), xlab = 'Human Population', ylab = 'Juveniles')
+# China
+abline(a = 5054.11977, b = -1.24563, col = 'blue') 
+# India
+abline(a = 5054.11977 - 818.65030, b = -1.24563 + 1.31526, col = 'red') 
+# Indonesia
+abline(a = 5054.11977 - 961.39246 , b = -1.24563 + 1.53082, col = 'orange') 
+# Malaysia
+abline(a = 5054.11977 - 676.65413, b = -1.24563 + 0.81239, col = 'green') 
+```
+
+**Answer**: 
+
+- The linear model uses China as the baseline for the country variable. And, we are considering whether the effects of population on baby bird populations vary from country to country. Therefore, the intercept for China will be the intercept and the slope for China will be the population estimate. The interaction term represents the relative variance with the baseline country China.
+
+- If it is significant, then the intercept of country_i will be the intercept plus the intercept estimated by country_i, and the slope of country_i will be the estimate of country_i interaction term with China.
+
+- For India, a significant interaction term (p = 0.001867 < alpha = 0.05) leads us to reject the null hypothesis, confirming that the effects of population on young bird populations in India are significantly different from those in China. In India, the slope of this relationship is calculated by adding the interaction term coefficient of 1.31526 to the baseline slope of the population (-1.24563). This results in a slope of 0.06963 for India. For each additional population, the number of young cranes decreased by 0.06963.
+
+- The intercept for India is adjusted from the baseline based on the country coefficient for India (-818.65030). So when the population is zero, the initial value for India is 5054.11977(baseline intercept) minus 818.65030 to get 4235.46947. Assuming all other variables remain constant, this is the expected number of young birds in India when the population is zero.
+
+
+# Extra Credit (Code and outputs required)
+
+```{r}
+# get the data
+data("iris")
+head(iris,3)
+```
+```{r}
+# get multicollinearity
+cor(iris[, c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width")])
+```
+```{r}
+# run linear regression model
+linmod6 <- lm(Sepal.Length ~ Sepal.Width + Petal.Length + Petal.Width + Species, data = iris)
+summary(linmod6)
+```
+```{r}
+# check assumptions of linmod6
+par(mfrow = c(1, 2))
+plot(linmod6)
+```
+```{r}
+summary(aov(Sepal.Length ~ Sepal.Width + Petal.Length + Petal.Width + Species, data = iris))
+```
+**Answer**: 
+
+- From the aov result, we could know that `Sepal.Width`, `Petal.Length`, `Petal.Width` and `Species` have significant influences on `Sepal.Length`, because their P-values are all less than alpha = 0.05. 
+
+- We also get `Petal.Length` has the most significant influence on `Sepal.Length` from linear regression model, because its coefficient is 0.82924, which means increase of `Petal.Length` per unit, `Sepal.Length` will increase by 0.82924 units. 
+
+- From the correlation coefficient matrix, we could know `Sepal.Length` has a high positive correlation with `Petal.Length` and `Petal.Width`, but a weak negative correlation with `Sepal.Width`.

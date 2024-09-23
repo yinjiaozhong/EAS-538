@@ -1,0 +1,172 @@
+---
+title: "Lab 5: Chi-square & ANOVA"
+embed-resources: true
+author: "Yinjiao Zhong"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+format:
+  html:
+    code-folding: show
+    highlight: textmate
+    number-sections: true
+    theme: flatly
+    toc: TRUE
+    toc-depth: 4
+    toc-float:
+      collapsed: false
+      smooth-scroll: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r include=FALSE}
+setwd("~/Desktop/EAS 538 Lab")
+```
+
+# Exercise 1
+
+## Exercise 1, Part 1
+> Write out the null and alternate hypothesis for the chi-square test you just ran. Please interpret the result. Can you reject the null hypothesis at alpha = 0.05? What about at alpha = 0.10?
+
+- **$H_0$ (Null hypothesis):** The number of students that believe in climate change is independent of whether they come from Kentucky or New York.
+- **$H_A$ (Alternative hypothesis):** The number of students that believe in climate change is not independent of whether they come from Kentucky or New York.
+- **Result:** 
+  As the result shown, the P-value is 0.02064. For alpha = 0.05, we can reject the null hypothesis (0.02064 < 0.05). The number of students that believe in climate change is not independent of whether they come from New York or Kentucky.
+  For alpha = 0.10, we can not reject the null hypothesis (0.02064 > 0.01). The number of students that believe in climate change is independent of whether they come from New York or Kentucky.
+
+```{r}
+ccyes <- c(78, 62)
+ccno <- c(22, 38)
+state <- c('New York', 'Kentucky')
+contable <- rbind(ccyes, ccno)
+colnames(contable) <- state
+contable
+chisq.test(contable)
+```
+
+## Exercise 1, Part 2
+> Now run the same analyses as above, but pick two different states. Use this link [https://climatecommunication.yale.edu/visualizations-data/ycom-us/] to get information on the % of people who believe global warming is happening in each state in the US. *Hint - look at the numbers for Kentucky and New York. How did I use these to parameterize my `ccyes` and `ccno` values above? Please do the same thing, but pick two different states.* 
+
+- **$H_0$ (Null hypothesis):** The percent of people that believe in climate change is independent of whether they come from Texas or Washington.
+- **$H_A$ (Alternative hypothesis):** The percent of people that believe in climate change is not independent of whether they come from Texas or Washington.
+- **Result:** As the result shown, the P-value is 0.6287. For alpha = 0.05, we can not reject the null hypothesis (0.0.6287 > 0.05). The percent of people that believe in climate change is independent of whether they come from Texas or Washington.
+
+```{r}
+ccyes <- c(72, 76)  # the percent of people who believed in climate change
+ccno <- c(28, 24)  # the percent of people who do not believe in climate change
+state <- c('Texas (%)', 'Washington (%)')
+contable <- rbind(ccyes, ccno)
+colnames(contable) <- state
+contable
+chisq.test(contable)
+```
+
+
+# Exercise 2
+```{r}
+head(OrchardSprays)
+```
+
+## Exercise 2, Part 1
+
+> Which treatments are significantly different from one another according to the results of the `TukeyHSD`?
+
+- **$H_0$ (Null hypothesis):** There is no difference in the amount of sugar the bees eat among the 8 groups of treatment.
+- **$H_A$ (Alternative hypothesis):** At least one of the treatment sugar consumption means is different from the others.
+- **Result:** As the result shown, the P-value of this ANOVA test is 9.5e-13 << 0.05. So we can reject the null hypothesis. At least one of the treatment sugar consumption means is different from the others. And the treatments are significantly different from one another according to the results of the `TukeyHSD`.
+```{r}
+?OrchardSprays
+boxplot(decrease ~ treatment, data = OrchardSprays, xlab = "treatment", ylab = "decrease")
+```
+```{r}
+spray.aov <- aov(decrease ~ treatment, data = OrchardSprays)
+summary(spray.aov)
+```
+```{r}
+# get significant groups
+Tukey.mat <- TukeyHSD(spray.aov)$treatment
+Tukey.mat
+```
+
+
+## Exercise 2, Part 2
+
+> Why do we use the Tukey's HSD test instead of just running multiple t-tests that compare each pair of treatments in your sample?
+
+- **Answer:**This is because multiple t test will cause a higher chance of committing at least one Type I error. So we use ANOVA instead of multiple t-test. While ANOVA can tell us that there are significant differences between groups, it does not specify which groups are significantly different from each other. `TukeyHSD` test is a kind of post-hoc analysis that helps determine which specific groups have significantly different means.
+
+# Exercise 3
+
+> Please interpret the results of your two-way ANOVA. Which factors have a significant effect on CO2 uptake?
+
+- **Hypotheses:**
+  - **Difference in factor `Treatment`**
+    - **$H_0$ (Null hypothesis):** There is no difference in uptake between nonchilled and chilled plants, controlling for plant type.
+    - **$H_A$ (Alternative hypothesis):** There is a difference in uptake between nonchilled and chilled plants, controlling for plant type.
+  - **Difference in factor `Type`**
+    - **$H_0$ (Null hypothesis):** There is no difference in uptake between Quebec and Mississippi plants, controlling for plant treatment.
+    - **$H_A$ (Alternative hypothesis):** There is a difference in uptake between Quebec and Mississippi plants, controlling for plant treatment.
+- **Answer:**
+    The P-value of the `Treatment` test is 0.000222 << alpha = 0.05. So we can reject the null hypothesis. There is a difference in uptake between nonchilled and chilled plants, controlling for plant type.
+    The P-value of the `Type` test is 3.68e-10 << alpha = 0.05. So we can reject the null hypothesis. There is a difference in uptake between Quebec and Mississippi plants, controlling for treatment.
+    So the both factors have a significant effect on CO2 uptake.
+
+```{r}
+head(CO2)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+boxplot(uptake ~ Type, data = CO2, las = 1, main = 'Uptake by Different Plant Types')
+boxplot(uptake ~ Treatment, data = CO2, las = 1, main = 'Uptake by Different Dreatments')
+```
+
+
+```{r}
+CO2.aov <- aov(uptake ~ Treatment + Type, data = CO2)
+summary(CO2.aov)
+```
+
+# Exercise 4
+```{r}
+library(fivethirtyeight)
+head(bechdel, 3)
+```
+
+## Exercise 4, Part 1
+
+> Please write out the null and alternate hypothesis. Can you reject the null hypothesis at alpha = 0.05 based on the p value of your ANOVA? Please explain your results in non-technical terms.
+
+- **$H_0$ (Null hypothesis):** There is no difference in the amount of money earned by each movie domestically (`domgross_2013`) whether these movies passed the Bechdel test (`binary`).
+- **$H_A$ (Alternative hypothesis):** There is a difference in the amount of money earned by each movie domestically whether these movies passed the Bechdel test.
+
+```{r}
+gross.aov <- aov(domgross_2013~binary, data=bechdel)
+summary(gross.aov)
+```
+- **Result:**This P-value is 2.6e-06 << alpha = 0.05. So we can reject the null hypothesis. There is a difference in the amount of money earned by each movie domestically whether these movies passed the Bechdel test.
+
+## Exercise 4, Part 2
+> Now run an ANOVA to see if 2013 dollars (`domgross_2013`) differ based on whether a movie passed the Bechdel test or not (`binary`) and the decade in which the movie was made (`decade_code`). *Hint - Right now the `decade_code` variable is an integer and therefore not a categorical variable. To turn it into a categorical variable, please use 'as.factor(decade_code)' in your ANOVA function.*
+
+```{r}
+gross.aov <- aov(domgross_2013~binary+as.factor(decade_code), data=bechdel)
+summary(gross.aov)
+```
+- **Hypotheses:**
+  - **Difference in factor `binary`**
+    - **$H_0$ (Null hypothesis):** There is no difference in the amount of money earned by each movie domestically whether these movies passed the Bechdel test, controlling for the decade in which the movie was made(`decade_code`).
+    - **$H_A$ (Alternative hypothesis):** There is a difference in the amount of money earned by each movie domestically whether these movies passed the Bechdel test, controlling for the decade in which the movie was made.
+  - **Difference in factor `decade_code`**
+    - **$H_0$ (Null hypothesis):** There is no difference in the amount of money earned by each movie domestically whether decade they are made, controlling for whether they passed the Bechdel test.
+    - **$H_A$ (Alternative hypothesis):** There is a difference in the amount of money earned by each movie domestically whether decade they are made, controlling for whether they passed the Bechdel test.
+- **Result:**
+    The P-value for the binary test is 0.002749 < alpha = 0.05. So we can reject the null hypothesis. There is a difference in the amount of money earned by each movie domestically whether they passed the Bechdel test, controlling for the decade in which the movie was made.
+    The P-value for the decade_code test is 0.000181 << alpha = 0.05. So we can reject the null hypothesis. There is a difference in the amount of money earned by each movie domestically in which decade they are made, controlling for whether they passed the Bechdel test.
+    So both factors have a significant effect on the amount of money earned by each movie domestically.
+
+## Exercise 4, Part 3
+> *BONUS/EXTRA CREDIT - worth 5 credits* Pick another dataset from within the `fivethirtyeight` package and run either a one way or two way ANOVA. Please write out the null and alternate hypothesis and state whether you can reject the null hypothesis based on your p value. Remember, in order for a dataset to work for this question, your indepdent variable has to be categorical (and have 2 or more categories) and your dependent variable has to be continuous. You can ask Kai or the GSIs for help selecting an appropriate dataset, but please do not ask other students.
+

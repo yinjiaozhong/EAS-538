@@ -1,0 +1,243 @@
+---
+embed-resources: true
+---
+---
+title: "Lab 03 T-test"
+author: "Yinjiao Zhong"
+date: "02/11/2024"
+output: html_document
+---
+***Lab Data Setup:***
+
+`commod`-> commodity.
+
+`concen`-> the concentration of pesticide residue on each apple tested.
+
+`lod`-> the limit of detection for the given pesticide detected on each appl.
+
+Set working directory, load in the aps.csv data
+```{r setup}
+setwd("/Users/zhongyinjiao/Desktop/EAS 538 Lab")
+apdata <- read.csv("aps.csv")
+head(apdata,5)
+```
+
+
+# Exercise 1
+
+## Part 1
+
+> Write out the null and alternative hypothesis for a one-way, two-tailed t-test using the example above. What did your results tell you? Can you reject the null hypothesis (at the 0.05 level)?  
+
+__Null Hypothesis:__  The pesticides value of apples(μ) is no different with the USDA’s limit for the amount of pesticides allowed in any food(0.1477).
+                                            
+                                            μ=0.1477
+
+__Alternative Hypothesis:__ The pesticides value of apples(μ) is a different with the USDA’s limit for the amount of pesticides(0.1477).
+                                            
+                                            μ≠0.1477
+                                            
+```{r}
+# t-test one-sample two-tail
+t.test(apdata[,'concen'], mu=0.1477)
+```
+__Result:__
+As the result, the P_value is 0.09225 greater than 0.05, so we can not reject the null hypothesis.The pesticides value of apples is no different with the USDA’s limit for the amount of pesticides allowed in any food.
+
+## Part 2
+
+> Write out the null and alternative hypothesis for a one-way, one-tailed t-test using the example above. What did your results tell you? Can you reject the null hypothesis (at the 0.05 level)?
+
+__Null Hypothesis:__  The pesticides value of apples(μ) is more than the USDA’s limit for the amount of pesticides(0.1477).
+                                              
+                                              μ≥0.1477
+
+__Alternative Hypothesis:__ The pesticides value of apples(μ) is less than the USDA’s limit for the amount of pesticides(0.1477).
+                                              
+                                              μ<0.1477
+                                              
+```{r}
+# t-test one-sample one-tail
+t.test(apdata[,'concen'], alternative = 'less', mu=0.1477)
+```
+__Result:__
+As the result, the P_values is 0.04613 less than 0.05, we can reject the null hypothesis. The pesticides value of apples is less than the USDA’s limit for the amount of pesticides.
+
+# Exercise 2
+```{r}
+# compute z distribution CIs
+cifunz <- function(means, zcrit, sem) {
+  cilower <- means - zcrit*sem
+  ciupper <- means + zcrit*sem
+  civals <- c(cilower, ciupper)
+  return(civals)
+}
+
+# comput t distribution CIs
+cifunt <- function(means, tcrit, sem) {
+  cilower <- means - tcrit*sem
+  ciupper <- means + tcrit*sem
+  civals <- c(cilower, ciupper)
+  return(civals)
+}
+```
+
+## Part 1
+
+> Why did you use 0.95 in your qt function instead of 0.975 (which is what you did last week)?
+
+```{r}
+meanval <- mean(apdata$concen)
+tcritval <- qt(0.95, df = length(apdata$concen) - 1)
+semval <- (sd(apdata$concen) / sqrt(length(apdata$concen)))
+cifunt(meanval, tcritval, semval)
+```
+__Answer:__
+This is because I'd like to create alpha area on the same side of this distribution in one-tail t-test. So I use 0.95(1-0.05=0.95) in my `qt()` function of 0.975(1-0.05/2=0.0975).
+
+## Part 2
+  
+> Can you reject the null hypothesis based on the confidence intervals that you calculated?
+
+__Null Hypothesis:__  The pesticides value of apples(μ) is more than the USDA’s limit for the amount of pesticides 0.1477.
+                                                  
+                                                  μ≥0.1477
+                                                  
+__Alternative Hypothesis:__ The pesticides value of apples(μ) is less than the USDA’s limit for the amount of pesticides 0.1477.
+                                                  
+                                                  μ<0.1477
+                                                  
+__Answer:__
+As the result, we can reject the null hypothesis. This is because this is one-tail test and we only pay attention to the left side which is 0.1476052<0.1477.
+
+## Part 3
+
+> How would you change the code above if you ran a two-tailed, one-way t-test? Please calculate 95% confidence intervals for a two-tailed, one-way t-test and tell us whether you can reject the null hypothesis. 
+
+```{r}
+# two-tailed one-sample t-test, alpha=0.05
+meanval <- mean(apdata$concen)
+# get two-tailed t quantile
+tcritval <- qt(0.975, df = length(apdata$concen) - 1)
+semval <- (sd(apdata$concen) / sqrt(length(apdata$concen)))
+cifunt(meanval, tcritval, semval)
+```
+
+__Null Hypothesis:__  The pesticides value of apples(μ) is no different with the USDA’s limit for the amount of pesticides 0.1477.
+                                              
+                                              μ=0.1477
+                                              
+__Alternative Hypothesis:__ The pesticides value of apples(μ) is a different with the USDA’s limit for the amount of pesticides 0.1477.
+                                              
+                                              μ≠0.1477
+                                              
+__Answer:__
+As the result, we can not reject the null hypothesis at the 0.05 level, this is because 0.1477 falls within CIs(0.1388, 0.1484).
+
+## Part 4
+
+> Let's use the `cifunz` function written above and `qnorm` to calculate 95% confidence intervals of a one-tailed, one-way test using the normal distribution. Can you reject the null hypothesis? How do the confidence intervals you calculated here (using the standard normal distribution) compare to those calculated originally (using the *t* distribution)?
+
+
+```{r}
+# one-tailed one-sample z-test, alpha = 0.05
+meanval <- mean(apdata$concen)
+zcritival <- qnorm(0.95)
+semval <- (sd(apdata$concen)/sqrt(length(apdata$concen)))
+cifunz(meanval, zcritival, semval)
+```
+__Null Hypothesis:__  The pesticides value of apples(μ) is more than the USDA’s limit for the amount of pesticides 0.1477.
+                                              
+                                              μ≥0.1477
+                                              
+__Alternative Hypothesis:__ The pesticides value of apples(μ) is less than the USDA’s limit for the amount of pesticides 0.1477.
+                                              
+                                              μ<0.1477
+                                              
+__Answer:__
+As the result, we can reject the null hypothesis. This is because the right side of the CIs is 0.1476<0.1477. The CIs I computed here using the z-distribution are nearly identical to those obtained using the t-distribution. This similarity arises from our large sample size, which renders the t-distribution almost indistinguishable from the normal distribution.
+
+# Exercise 3
+
+> How would you use the above results to calculate the t-statistic, df, and p-value of a two-tailed, one-way t-test?  
+
+```{r}
+# get the t statistics
+# samplem -> the mean of our sample
+# refval -> the reference value
+# sem -> the standard error of the mean
+tstat <- function(samplem, refval, sem) {
+  val <- (samplem - refval)/sem
+  return(val)
+  }
+t.test(apdata[,'concen'], alternative = 'less', mu = 0.1477)
+```
+```{r}
+samplem <- mean(apdata$concen)
+refval <- 0.1477
+sem <- sd(apdata$concen) / sqrt(length(apdata$concen))
+tval <- tstat(samplem, refval, sem)
+pval <- pt(tval, df = length(apdata$concen) - 1)
+```
+__Answer:__
+Computing t-statistic and the df of two-tailed is same. But we should to multiply it by 2 for the P_value.
+
+# Exercise 4
+```{r}
+table(iris$Species)
+iris_sub <- subset(iris, Species %in% c('setosa', 'versicolor'))
+```
+
+## Part 1
+
+> Please write out the null and alternate hypothesis for the t-test above. Are you able to reject the null hypothesis? What does your result mean in non technical terms?    
+
+```{r}
+t.test(Sepal.Length ~ Species, data = iris_sub)
+```
+
+__Null Hypothesis:__ The sepal length of setosa is no different with versicolor. 
+
+__Alternative Hypothesis:__ The sepal length of setosa is no different with versicolor.
+
+__Result:__ The P_value is smaller than 0.05, so I can reject the null hypothesis. In non technical term, it's very unlikely that the different in sepal length between the two species happened randomly, which means there is a significant different in the sepal length of the two species.
+
+## Part 2
+
+> Please repeat the above analysis for `Sepal.Width`, `Petal.Length`, and `Petal.Width` for the `iris_sub` dataset. Please interpret the results of these 3 t-tests in non-technical terms. 
+
+### Comparing the Sepal width
+
+```{r}
+t.test(Sepal.Width ~ Species, data=iris_sub)
+```
+
+__Null Hypothesis:__ The sepal width of setosa is no different with versicolor. 
+
+__Alternative Hypothesis:__ The sepal width of setosa is no different with versicolor.
+
+__Result:__ The P_value is smaller than 0.05, so I can reject the null hypothesis. In non technical term, it's very unlikely that the different in sepal width between the two species happened randomly, which means there is a significant different in the sepal length of the two species.
+
+### Comparing the Petal length 
+
+```{r}
+t.test(Petal.Length ~ Species, data=iris_sub)
+```
+
+__Null Hypothesis:__ The petal length of setosa is no different with versicolor. 
+
+__Alternative Hypothesis:__ The petal length of setosa is no different with versicolor.
+
+__Result:__ The P_value is smaller than 0.05, so I can reject the null hypothesis. In non technical term, it's very unlikely that the different in petal length between the two species happened randomly, which means there is a significant different in the sepal length of the two species.
+
+### Comparing the Petal Width 
+
+```{r}
+t.test(Petal.Width ~ Species, data=iris_sub)
+```
+
+__Null Hypothesis:__ The petal width of setosa is no different with versicolor. 
+
+__Alternative Hypothesis:__ The petal width of setosa is no different with versicolor.
+
+__Result:__ The P_value is smaller than 0.05, so I can reject the null hypothesis. In non technical term, it's very unlikely that the different in petal width between the two species happened randomly, which means there is a significant different in the sepal length of the two species.
